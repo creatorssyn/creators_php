@@ -21,6 +21,11 @@ class Creators_API
 	const API_URL = 'http://get.creators.com';
 	
 	/**
+	 * API Version
+	 */
+	const API_VERSION = 0.1;
+	
+	/**
 	 * Constructor
 	 * @param string api_key User's API key.
 	 */
@@ -44,7 +49,10 @@ class Creators_API
 		$ch = curl_init(self::API_URL.($endpoint[0] == '/'?'':'/').$endpoint);
  
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('X_API_Key: '.$this->api_key));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, 
+			array('X_API_KEY: '.$this->api_key, 
+			      'X_API_VERSION: '.self::API_VERSION));
+
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
  
         $response = curl_exec($ch);
