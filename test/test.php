@@ -147,9 +147,62 @@ class TestApi extends UnitTestCase
 		
 		$releases = $api->get_releases('mrz', 1);
 		
-		$api->download_file($releases[0]['files'][0]['url'], $dest);
+		$api->download_file($releases[0]['files'][0]['url'], $dest, $headers);
 		
 		$this->assertEqual($releases[0]['files'][0]['sha1'], sha1_file($dest));
+		$this->assertTrue(isset($headers['Content-Length']));
+		$this->assertEqual($headers['Content-Length'], filesize($dest));
+		unlink($dest);
+	}
+	
+	function TestZip()
+	{
+		$api = new Creators_API($this->api_key);
+		$dest = "api_test_zip";
+		$dir = "unzip";
+		
+		try {
+			$api->download_zip(-1, $dest);
+		}
+		catch(ApiException $e) {
+			if($e->getCode() == 404)
+				$this->pass();
+			else
+				$this->fail('Unexpected ApiException error code');
+		}
+		catch(Exception $e) {
+			$this->fail('Unexpected exception type');
+		}
+		
+		$releases = $api->get_releases('tma', 1);
+		
+		$api->download_zip($releases[0]['id'], $dest, $headers);
+		
+		$this->assertTrue(isset($headers['Content-Length']));
+		$this->assertEqual($headers['Content-Length'], filesize($dest));
+		$this->assertEqual($headers['Content-Type'], 'application/zip');
+		
+		exec("unzip -d $dir $dest", $out, $ret);
+		
+		$this->assertEqual($ret, 0);
+		
+		foreach(glob("$dir/*") as $file)
+		{
+			$found = FALSE;
+			
+			foreach($releases[0]['files'] as $rel_file)
+			{
+				if(basename($file) == $rel_file['filename'])
+				{
+					$found = TRUE;
+					$this->assertEqual($rel_file['sha1'], sha1_file($file));
+				}
+			}
+			
+			$this->assertEqual($found, TRUE);
+		}
+		
+		exec("rm -r $dir");
 		unlink($dest);
 	}
 }

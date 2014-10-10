@@ -10,6 +10,7 @@ PHP interface to Creators GET API. Full docs available here: [http://get.creator
 - `get_feature_details` - Get details on a feature
 - `get_releases` - Get a list of releases for a feature
 - `download_file` - Download a file
+- `download_zip` - Generate and download a release ZIP
 - `syn` - SYN the server
 - `api_request` - Make an API request
 - `ApiException` - API Exception class

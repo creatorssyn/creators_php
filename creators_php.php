@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Creators GET API Interface v0.1
+ * Creators GET API Interface v0.2
  * Full API docs: http://get.creators.com/docs/wiki
  * Copyright (C) 2014 Creators.com
  * @author Brandon Telle <btelle@creators.com>
@@ -23,7 +23,7 @@ class Creators_API
 	/**
 	 * API Version
 	 */
-	const API_VERSION = 0.1;
+	const API_VERSION = 0.2;
 	
 	/**
 	 * Constructor
@@ -38,10 +38,11 @@ class Creators_API
 	 * Make an API request.
 	 * @param endpoint string API url
 	 * @param parse_json bool if TRUE, parse the result as JSON and return the parsed object
+	 * @param headers array stores the headers returned with the API response
 	 * @throws ApiException if an error code is returned by the API
 	 * @return mixed parsed JSON object, or raw return string
 	 */
-	function api_request($endpoint, $parse_json=TRUE)
+	function api_request($endpoint, $parse_json=TRUE, &$headers=array())
 	{
 		if($this->api_key === NULL)
 			throw new ApiException("API Key must be set");
@@ -52,10 +53,26 @@ class Creators_API
 		curl_setopt($ch, CURLOPT_HTTPHEADER, 
 			array('X_API_KEY: '.$this->api_key, 
 			      'X_API_VERSION: '.self::API_VERSION));
-
+				  
+		curl_setopt($ch, CURLOPT_VERBOSE, 1);
+		curl_setopt($ch, CURLOPT_HEADER, 1);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
  
         $response = curl_exec($ch);
+		
+		// Separate the headers from the body. This may be slow for large body size?
+		while(substr($response, 0, 7) == 'HTTP/1.')
+		{
+			list($header, $response) = explode("\r\n\r\n", $response, 2);
+			
+			if(preg_match('/Location: (.*)/', $header, $r))
+				$location = trim($r[1]);
+		}
+		
+		$headers = http_parse_headers($header);
+		
+		if(isset($location))
+			$headers['Redirect-URL'] = $location;
 		
         if(!$response)
         {
@@ -127,16 +144,46 @@ class Creators_API
 	 * Download a file
 	 * @param string url URL string provided in the files section of a release result
 	 * @param string destination path to the location the file should be saved to
+	 * @param array headers stores the headers returned with the API response
 	 * @throws ApiException if destination is not a writable file location or url is unavailable
 	 * @return bool TRUE if file is downloaded successfully
 	 */
-	function download_file($url, $destination)
+	function download_file($url, $destination, &$headers=array())
 	{
 		$fh = fopen($destination, 'wb');
 		
 		if($fh !== FALSE)
 		{
-			$contents = $this->api_request($url, FALSE);
+			$contents = $this->api_request($url, FALSE, $headers);
+			
+			if($contents[0] === '{')
+			{
+				$response = json_decode($contents, TRUE);
+				
+				if(is_array($response) && isset($response['error']) && $response['error'] > 0)
+					throw new ApiException($response['message'], $response['error']);
+			}
+			
+			if(fwrite($fh, $contents) === FALSE)
+				throw new ApiException("Unable to write to file");
+				
+			fclose($fh);
+			return TRUE;
+			
+		}
+		else
+		{
+			throw new ApiException("Unable to open destination");
+		}
+	}
+	
+	function download_zip($release_id, $destination, &$headers=array())
+	{
+		$fh = fopen($destination, 'wb');
+		
+		if($fh !== FALSE)
+		{
+			$contents = $this->api_request('/api/files/zip/'.$release_id, FALSE, $headers);
 			
 			if($contents[0] === '{')
 			{
@@ -173,6 +220,54 @@ class ApiException extends Exception
 	public function __toString() 
 	{
         return __CLASS__ . ": ".(($this->code > 0)?"[{$this->code}]:":"")." {$this->message}\n";
+    }
+}
+
+/**
+ * Substitute for http_parse_headers if pecl_http is not installed
+ *
+ * http://php.net/manual/en/function.http-parse-headers.php
+ */
+if (!function_exists('http_parse_headers'))
+{
+    function http_parse_headers($raw_headers)
+    {
+        $headers = array();
+        $key = ''; // [+]
+
+        foreach(explode("\n", $raw_headers) as $i => $h)
+        {
+            $h = explode(':', $h, 2);
+
+            if (isset($h[1]))
+            {
+                if (!isset($headers[$h[0]]))
+                    $headers[$h[0]] = trim($h[1]);
+                elseif (is_array($headers[$h[0]]))
+                {
+                    // $tmp = array_merge($headers[$h[0]], array(trim($h[1]))); // [-]
+                    // $headers[$h[0]] = $tmp; // [-]
+                    $headers[$h[0]] = array_merge($headers[$h[0]], array(trim($h[1]))); // [+]
+                }
+                else
+                {
+                    // $tmp = array_merge(array($headers[$h[0]]), array(trim($h[1]))); // [-]
+                    // $headers[$h[0]] = $tmp; // [-]
+                    $headers[$h[0]] = array_merge(array($headers[$h[0]]), array(trim($h[1]))); // [+]
+                }
+
+                $key = $h[0]; // [+]
+            }
+            else // [+]
+            { // [+]
+                if (substr($h[0], 0, 1) == "\t") // [+]
+                    $headers[$key] .= "\r\n\t".trim($h[0]); // [+]
+                elseif (!$key) // [+]
+                    $headers[0] = trim($h[0]);trim($h[0]); // [+]
+            } // [+]
+        }
+
+        return $headers;
     }
 }
  
