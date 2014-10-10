@@ -3,7 +3,7 @@
 /**
  * Creators GET API Interface v0.2
  * Full API docs: http://get.creators.com/docs/wiki
- * Copyright (C) 2014 Creators.com
+ * @copyright (c) 2014 Creators.com
  * @author Brandon Telle <btelle@creators.com>
  */
 
@@ -169,7 +169,6 @@ class Creators_API
 				
 			fclose($fh);
 			return TRUE;
-			
 		}
 		else
 		{
@@ -177,6 +176,14 @@ class Creators_API
 		}
 	}
 	
+	/**
+	 * Download a zip archive of the entire contents of a release
+	 * @param int release_id unique ID of the release to download
+	 * @param string destination path to the location the file should be saved to
+	 * @param array headers stores the headers returned with the API response
+	 * @throws ApiException if destination is not a writable file location or release is not found
+	 * @return bool TRUE if file is downloaded successfully
+	 */
 	function download_zip($release_id, $destination, &$headers=array())
 	{
 		$fh = fopen($destination, 'wb');
@@ -198,7 +205,6 @@ class Creators_API
 				
 			fclose($fh);
 			return TRUE;
-			
 		}
 		else
 		{
