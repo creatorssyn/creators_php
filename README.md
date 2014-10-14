@@ -13,6 +13,7 @@ PHP interface to Creators GET API. Full docs available here: [http://get.creator
 - `download_zip` - Generate and download a release ZIP
 - `syn` - SYN the server
 - `api_request` - Make an API request
+- `authenticate` - Authenticate without an API key
 - `ApiException` - API Exception class
 
 Download the latest PHP package here: [http://get.creators.com/api/etc/download/php](http://get.creators.com/api/etc/download/php)

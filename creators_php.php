@@ -9,60 +9,60 @@
 
 class Creators_API 
 {
-	/**
-	 * User's API key.
-	 * @var string API key
-	 */
-	public $api_key = NULL;
-	
-	/**
-	 * URL used to access the GET API.
-	 */
-	const API_URL = 'http://get.creators.com';
-	
-	/**
-	 * API Version
-	 */
-	const API_VERSION = 0.3;
+    /**
+     * User's API key.
+     * @var string API key
+     */
+    public $api_key = NULL;
+    
+    /**
+     * URL used to access the GET API.
+     */
+    const API_URL = 'http://get.creators.com';
+    
+    /**
+     * API Version
+     */
+    const API_VERSION = 0.3;
     
     /**
      * API Key length
      */
      const API_KEY_LENGTH = 40;
-	
-	/**
-	 * Constructor
-	 * @param string api_key User's API key.
-	 */
-	function __construct($api_key=NULL)
-	{
-		$this->api_key = $api_key;
-	}
-	
-	/**
-	 * Make an API request.
-	 * @param string endpoint API url
-	 * @param bool parse_json if TRUE, parse the result as JSON and return the parsed object
-	 * @param array headers stores the headers returned with the API response
+    
+    /**
+     * Constructor
+     * @param string api_key User's API key.
+     */
+    function __construct($api_key=NULL)
+    {
+        $this->api_key = $api_key;
+    }
+    
+    /**
+     * Make an API request.
+     * @param string endpoint API url
+     * @param bool parse_json if TRUE, parse the result as JSON and return the parsed object
+     * @param array headers stores the headers returned with the API response
      * @param array post_data associative array of data to POST to the server
-	 * @throws ApiException if an error code is returned by the API
-	 * @return mixed parsed JSON object, or raw return string
-	 */
-	function api_request($endpoint, $parse_json=TRUE, &$headers=array(), $post_data=array())
-	{
-		if($this->api_key === NULL && empty($post_data))
-			throw new ApiException("API Key must be set");
-			
-		$ch = curl_init(self::API_URL.($endpoint[0] == '/'?'':'/').$endpoint);
+     * @throws ApiException if an error code is returned by the API
+     * @return mixed parsed JSON object, or raw return string
+     */
+    function api_request($endpoint, $parse_json=TRUE, &$headers=array(), $post_data=array())
+    {
+        if($this->api_key === NULL && empty($post_data))
+            throw new ApiException("API Key must be set");
+            
+        $ch = curl_init(self::API_URL.($endpoint[0] == '/'?'':'/').$endpoint);
  
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, 
-			array('X_API_KEY: '.$this->api_key, 
-			      'X_API_VERSION: '.self::API_VERSION));
-				  
-		curl_setopt($ch, CURLOPT_VERBOSE, 1);
-		curl_setopt($ch, CURLOPT_HEADER, 1);
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, 
+            array('X_API_KEY: '.$this->api_key, 
+                  'X_API_VERSION: '.self::API_VERSION));
+                  
+        curl_setopt($ch, CURLOPT_VERBOSE, 1);
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         
         if(!empty($post_data))
         {
@@ -71,43 +71,43 @@ class Creators_API
         }
  
         $response = curl_exec($ch);
-		
-		// Separate the headers from the body. This may be slow for large body size?
-		while(substr($response, 0, 7) == 'HTTP/1.')
-		{
-			list($header, $response) = explode("\r\n\r\n", $response, 2);
-			
-			if(preg_match('/Location: (.*)/', $header, $r))
-				$location = trim($r[1]);
-		}
-		
-		$headers = http_parse_headers($header);
-		
-		if(isset($location))
-			$headers['Redirect-URL'] = $location;
-		
+        
+        // Separate the headers from the body. This may be slow for large body size?
+        while(substr($response, 0, 7) == 'HTTP/1.')
+        {
+            list($header, $response) = explode("\r\n\r\n", $response, 2);
+            
+            if(preg_match('/Location: (.*)/', $header, $r))
+                $location = trim($r[1]);
+        }
+        
+        $headers = http_parse_headers($header);
+        
+        if(isset($location))
+            $headers['Redirect-URL'] = $location;
+        
         if(!$response)
         {
             throw new ApiException("Server error", 500);
         }
         else 
         {
-			// Check for HTTP error messages
-			preg_match('/Error ([0-9]+): (.*)/', $response, $matches);
-			if(isset($matches[1]))
-				throw new ApiException($matches[2], $matches[1]);
-		
-			// Parse JSON responses
-			if($parse_json)
-				$response = json_decode($response, TRUE);
+            // Check for HTTP error messages
+            preg_match('/Error ([0-9]+): (.*)/', $response, $matches);
+            if(isset($matches[1]))
+                throw new ApiException($matches[2], $matches[1]);
+        
+            // Parse JSON responses
+            if($parse_json)
+                $response = json_decode($response, TRUE);
             
-			// Check for server-generated errors
-			if(is_array($response) && isset($response['error']) && $response['error'] > 0)
-				throw new ApiException($response['message'], $response['error']);
-				
-			return $response;
+            // Check for server-generated errors
+            if(is_array($response) && isset($response['error']) && $response['error'] > 0)
+                throw new ApiException($response['message'], $response['error']);
+                
+            return $response;
         }
-	}
+    }
     
     /**
      * Authenticate to the API server without an API key.
@@ -136,121 +136,121 @@ class Creators_API
         
         return FALSE;
     }
-	
-	/**
-	 * SYN the server
-	 * @return string "ack"
-	 */
-	function syn()
-	{
-		return $this->api_request('api/etc/syn');
-	}
-	
-	/**
-	 * Get a list of available features
-	 * @param int limit number of results to return
-	 * @return array features
-	 */
-	function get_features($limit=1000)
-	{
-		return $this->api_request('api/features/get_list/json/NULL/'.$limit.'/0');
-	}
-	
-	/**
-	 * Get details on a feature
-	 * @param string filecode unique file code for the feature
-	 * @return array feature info
-	 */
-	function get_feature_details($filecode)
-	{
-		return $this->api_request('api/features/details/json/'.$filecode);
-	}
-	
-	/**
-	 * Get a list of releases for a feature
-	 * @param filecode string unique filecode for a feature
-	 * @param int limit number of releases to return, default 10
-	 * @param int offset offset from the head of the list, default 0
-	 * @param string start_date start date: YYYY-MM-DD, default NULL
-	 * @param string end_date end_date: YYYY-MM-DD, default NULL
-	 * @return array releases
-	 */
-	function get_releases($filecode, $limit=10, $offset=0, $start_date=NULL, $end_date=NULL)
-	{
-		return $this->api_request('api/features/get_list/json/'.$filecode."/".$limit."/".$offset."?start_date=".$start_date."&end_date=".$end_date);
-	}
-	
-	/**
-	 * Download a file
-	 * @param string url URL string provided in the files section of a release result
-	 * @param string destination path to the location the file should be saved to
-	 * @param array headers stores the headers returned with the API response
-	 * @throws ApiException if destination is not a writable file location or url is unavailable
-	 * @return bool TRUE if file is downloaded successfully
-	 */
-	function download_file($url, $destination, &$headers=array())
-	{
-		$fh = fopen($destination, 'wb');
-		
-		if($fh !== FALSE)
-		{
-			$contents = $this->api_request($url, FALSE, $headers);
-			
-			if($contents[0] === '{')
-			{
-				$response = json_decode($contents, TRUE);
-				
-				if(is_array($response) && isset($response['error']) && $response['error'] > 0)
-					throw new ApiException($response['message'], $response['error']);
-			}
-			
-			if(fwrite($fh, $contents) === FALSE)
-				throw new ApiException("Unable to write to file");
-				
-			fclose($fh);
-			return TRUE;
-		}
-		else
-		{
-			throw new ApiException("Unable to open destination");
-		}
-	}
-	
-	/**
-	 * Download a zip archive of the entire contents of a release
-	 * @param int release_id unique ID of the release to download
-	 * @param string destination path to the location the file should be saved to
-	 * @param array headers stores the headers returned with the API response
-	 * @throws ApiException if destination is not a writable file location or release is not found
-	 * @return bool TRUE if file is downloaded successfully
-	 */
-	function download_zip($release_id, $destination, &$headers=array())
-	{
-		$fh = fopen($destination, 'wb');
-		
-		if($fh !== FALSE)
-		{
-			$contents = $this->api_request('/api/files/zip/'.$release_id, FALSE, $headers);
-			
-			if($contents[0] === '{')
-			{
-				$response = json_decode($contents, TRUE);
-				
-				if(is_array($response) && isset($response['error']) && $response['error'] > 0)
-					throw new ApiException($response['message'], $response['error']);
-			}
-			
-			if(fwrite($fh, $contents) === FALSE)
-				throw new ApiException("Unable to write to file");
-				
-			fclose($fh);
-			return TRUE;
-		}
-		else
-		{
-			throw new ApiException("Unable to open destination");
-		}
-	}
+    
+    /**
+     * SYN the server
+     * @return string "ack"
+     */
+    function syn()
+    {
+        return $this->api_request('api/etc/syn');
+    }
+    
+    /**
+     * Get a list of available features
+     * @param int limit number of results to return
+     * @return array features
+     */
+    function get_features($limit=1000)
+    {
+        return $this->api_request('api/features/get_list/json/NULL/'.$limit.'/0');
+    }
+    
+    /**
+     * Get details on a feature
+     * @param string filecode unique file code for the feature
+     * @return array feature info
+     */
+    function get_feature_details($filecode)
+    {
+        return $this->api_request('api/features/details/json/'.$filecode);
+    }
+    
+    /**
+     * Get a list of releases for a feature
+     * @param filecode string unique filecode for a feature
+     * @param int limit number of releases to return, default 10
+     * @param int offset offset from the head of the list, default 0
+     * @param string start_date start date: YYYY-MM-DD, default NULL
+     * @param string end_date end_date: YYYY-MM-DD, default NULL
+     * @return array releases
+     */
+    function get_releases($filecode, $limit=10, $offset=0, $start_date=NULL, $end_date=NULL)
+    {
+        return $this->api_request('api/features/get_list/json/'.$filecode."/".$limit."/".$offset."?start_date=".$start_date."&end_date=".$end_date);
+    }
+    
+    /**
+     * Download a file
+     * @param string url URL string provided in the files section of a release result
+     * @param string destination path to the location the file should be saved to
+     * @param array headers stores the headers returned with the API response
+     * @throws ApiException if destination is not a writable file location or url is unavailable
+     * @return bool TRUE if file is downloaded successfully
+     */
+    function download_file($url, $destination, &$headers=array())
+    {
+        $fh = fopen($destination, 'wb');
+        
+        if($fh !== FALSE)
+        {
+            $contents = $this->api_request($url, FALSE, $headers);
+            
+            if($contents[0] === '{')
+            {
+                $response = json_decode($contents, TRUE);
+                
+                if(is_array($response) && isset($response['error']) && $response['error'] > 0)
+                    throw new ApiException($response['message'], $response['error']);
+            }
+            
+            if(fwrite($fh, $contents) === FALSE)
+                throw new ApiException("Unable to write to file");
+                
+            fclose($fh);
+            return TRUE;
+        }
+        else
+        {
+            throw new ApiException("Unable to open destination");
+        }
+    }
+    
+    /**
+     * Download a zip archive of the entire contents of a release
+     * @param int release_id unique ID of the release to download
+     * @param string destination path to the location the file should be saved to
+     * @param array headers stores the headers returned with the API response
+     * @throws ApiException if destination is not a writable file location or release is not found
+     * @return bool TRUE if file is downloaded successfully
+     */
+    function download_zip($release_id, $destination, &$headers=array())
+    {
+        $fh = fopen($destination, 'wb');
+        
+        if($fh !== FALSE)
+        {
+            $contents = $this->api_request('/api/files/zip/'.$release_id, FALSE, $headers);
+            
+            if($contents[0] === '{')
+            {
+                $response = json_decode($contents, TRUE);
+                
+                if(is_array($response) && isset($response['error']) && $response['error'] > 0)
+                    throw new ApiException($response['message'], $response['error']);
+            }
+            
+            if(fwrite($fh, $contents) === FALSE)
+                throw new ApiException("Unable to write to file");
+                
+            fclose($fh);
+            return TRUE;
+        }
+        else
+        {
+            throw new ApiException("Unable to open destination");
+        }
+    }
 }
 
 /**
@@ -258,13 +258,13 @@ class Creators_API
  */
 class ApiException extends Exception
 {
-	public function __construct($message, $code = 0, Exception $previous = null) 
-	{
+    public function __construct($message, $code = 0, Exception $previous = null) 
+    {
         parent::__construct($message, $code, $previous);
     }
-	
-	public function __toString() 
-	{
+    
+    public function __toString() 
+    {
         return __CLASS__ . ": ".(($this->code > 0)?"[{$this->code}]:":"")." {$this->message}\n";
     }
 }
