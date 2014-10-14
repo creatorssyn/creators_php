@@ -1,10 +1,10 @@
 <?php
 
 /**
- * Creators GET API Interface v0.2
+ * Creators GET API Interface v0.3
  * Full API docs: http://get.creators.com/docs/wiki
- * @copyright (c) 2014 Creators.com
  * @author Brandon Telle <btelle@creators.com>
+ * @copyright (c) 2014 Creators <www.creators.com>
  */
 
 class Creators_API 
@@ -23,7 +23,12 @@ class Creators_API
 	/**
 	 * API Version
 	 */
-	const API_VERSION = 0.2;
+	const API_VERSION = 0.3;
+    
+    /**
+     * API Key length
+     */
+     const API_KEY_LENGTH = 40;
 	
 	/**
 	 * Constructor
@@ -36,15 +41,16 @@ class Creators_API
 	
 	/**
 	 * Make an API request.
-	 * @param endpoint string API url
-	 * @param parse_json bool if TRUE, parse the result as JSON and return the parsed object
-	 * @param headers array stores the headers returned with the API response
+	 * @param string endpoint API url
+	 * @param bool parse_json if TRUE, parse the result as JSON and return the parsed object
+	 * @param array headers stores the headers returned with the API response
+     * @param array post_data associative array of data to POST to the server
 	 * @throws ApiException if an error code is returned by the API
 	 * @return mixed parsed JSON object, or raw return string
 	 */
-	function api_request($endpoint, $parse_json=TRUE, &$headers=array())
+	function api_request($endpoint, $parse_json=TRUE, &$headers=array(), $post_data=array())
 	{
-		if($this->api_key === NULL)
+		if($this->api_key === NULL && empty($post_data))
 			throw new ApiException("API Key must be set");
 			
 		$ch = curl_init(self::API_URL.($endpoint[0] == '/'?'':'/').$endpoint);
@@ -57,6 +63,12 @@ class Creators_API
 		curl_setopt($ch, CURLOPT_VERBOSE, 1);
 		curl_setopt($ch, CURLOPT_HEADER, 1);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        
+        if(!empty($post_data))
+        {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
+        }
  
         $response = curl_exec($ch);
 		
@@ -96,6 +108,34 @@ class Creators_API
 			return $response;
         }
 	}
+    
+    /**
+     * Authenticate to the API server without an API key.
+     * If authentication succeeds, the returned API key is stored locally.
+     * @param string username GET username
+     * @param string password GET password
+     * @return bool TRUE if auth succeeds, FALSE if the server rejects our login
+     */
+    function authenticate($username, $password)
+    {
+        try
+        {
+            $login = array('username'=>$username, 'password'=>$password);
+            $ret = $this->api_request('/api/users/auth', TRUE, $headers, $login);
+        }
+        catch(APIException $e) 
+        {
+            return FALSE;
+        }
+        
+        if(isset($ret['api_key']) && strlen($ret['api_key']) == self::API_KEY_LENGTH)
+        {
+            $this->api_key = $ret['api_key'];
+            return TRUE;
+        }
+        
+        return FALSE;
+    }
 	
 	/**
 	 * SYN the server

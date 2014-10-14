@@ -9,8 +9,25 @@ class TestApi extends UnitTestCase
 	// This is a demo user key. These tests are written specifically 
 	// for this user. They will fail if the API key is changed.
 	var $api_key = 'B8C31227882C3C10D954BD11A67DF138125C895B';
+    
+    // Username and password for the demo API account.
+    var $api_username = 'cr_api_demo';
+    var $api_password = 'WAg_h(POJI*GF4&3e2R$v6/9=';
 	
-	function TestAuthenticationFail()
+    function TestAuthenticationFail()
+    {
+        $api = new Creators_API();
+        $this->assertEqual($api->authenticate($this->api_username, 'gobbledygook'), FALSE);
+    }
+    
+    function TestAuthenticationPass()
+    {
+        $api = new Creators_API();
+        $this->assertEqual($api->authenticate($this->api_username, $this->api_password), TRUE);
+        $this->assertEqual($api->api_key, $this->api_key);
+    }
+    
+    function TestAPIAuthenticationFail()
 	{
 		$api = new Creators_API('NotAnAPIKey');
 		
@@ -28,7 +45,7 @@ class TestApi extends UnitTestCase
 		}
 	}
 	
-	function TestAuthenticationPass()
+	function TestAPIAuthenticationPass()
 	{
 		$api = new Creators_API($this->api_key);
 		$this->assertEqual($api->syn(), "ack");
