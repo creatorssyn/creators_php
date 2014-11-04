@@ -57,6 +57,7 @@ class TestApi extends UnitTestCase
         
         $this->assertIsA($api->get_features(), 'array');
         $this->assertEqual(count($api->get_features()), 4);
+        $this->assertEqual(count($api->get_features(1000, TRUE)), 5);
     }
     
     function TestFeatureDetails()

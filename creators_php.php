@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Creators GET API Interface v0.3
+ * Creators GET API Interface v0.3.1
  * Full API docs: http://get.creators.com/docs/wiki
  * @author Brandon Telle <btelle@creators.com>
  * @copyright (c) 2014 Creators <www.creators.com>
@@ -23,7 +23,7 @@ class Creators_API
     /**
      * API Version
      */
-    const API_VERSION = 0.3;
+    const API_VERSION = 0.31;
     
     /**
      * API Key length
@@ -147,13 +147,14 @@ class Creators_API
     }
     
     /**
-     * Get a list of available features
+     * Get a list of active available features
      * @param int limit number of results to return
+     * @param bool get_all if true, results will include inactive features
      * @return array features
      */
-    function get_features($limit=1000)
+    function get_features($limit=1000, $get_all=FALSE)
     {
-        return $this->api_request('api/features/get_list/json/NULL/'.$limit.'/0');
+        return $this->api_request('api/features/get_list/json/NULL/'.$limit.'/0?get_all='.($get_all?'1':'0'));
     }
     
     /**
